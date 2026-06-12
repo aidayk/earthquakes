@@ -1,18 +1,16 @@
 """
 main.py - Entry point for the earthquake query application.
 
-This script reads command-line arguments from the user and runs
-the earthquake query program.
+This script reads command-line arguments from the user.
+The final earthquake query logic will be connected in the next project steps.
 """
 
 import argparse
 
-from earthq_package.earthquakes import get_earthquake
-
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Return earthquake information for a given number of past days."
+        description="Return the strongest earthquakes in Italy."
     )
 
     parser.add_argument(
@@ -38,16 +36,10 @@ def main():
 
     args = parser.parse_args()
 
-    mag, place = get_earthquake(args.days)
-
-    print(
-        "The largest earthquake of last {} days had magnitude {} and was located at {}".format(
-            args.days, mag, place
-        )
-    )
-
-    print("Requested maximum number of earthquakes:", args.K)
-    print("Requested minimum magnitude:", args.magnitude)
+    print("Command-line arguments received:")
+    print("days:", args.days)
+    print("K:", args.K)
+    print("magnitude:", args.magnitude)
 
 
 if __name__ == "__main__":

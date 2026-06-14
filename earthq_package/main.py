@@ -9,6 +9,7 @@ import argparse
 
 
 def main():
+    """Parse command-line arguments for the earthquake query program."""
     parser = argparse.ArgumentParser(
         description="Return the strongest earthquakes in Italy."
     )

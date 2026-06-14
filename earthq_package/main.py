@@ -1,4 +1,4 @@
-﻿"""
+"""
 main.py - Entry point for the earthquake query application.
 
 This script reads command-line arguments from the user.

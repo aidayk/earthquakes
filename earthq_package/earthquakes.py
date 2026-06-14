@@ -30,7 +30,7 @@ def read_bounding_box():
 
 def _format_datetime_parts(time_string):
     """Convert an ISO datetime string into day and time strings."""
-    clean_time = time_string.replace("Z", "+00:00")
+    clean_time = time_string.strip().replace("Z", "+00:00")
     event_datetime = datetime.datetime.fromisoformat(clean_time)
 
     day = event_datetime.strftime("%d/%m/%Y")
@@ -69,11 +69,11 @@ def gather_earthquakes(days):
     if not lines:
         return []
 
-    header = lines[0].lstrip("#").split("|")
+    header = [column.strip() for column in lines[0].lstrip("#").split("|")]
     earthquakes = []
 
     for line in lines[1:]:
-        values = line.split("|")
+        values = [value.strip() for value in line.split("|")]
         event = dict(zip(header, values))
 
         try:

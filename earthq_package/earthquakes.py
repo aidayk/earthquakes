@@ -1,41 +1,92 @@
 """
-earthquakes.py - Fetches earthquake data from the USGS database.
-
-USGS (United States Geological Survey) provides a public API
-for querying global seismic events.
+earthquakes.py - Functions for gathering earthquake data from the INGV API.
 """
+
+import csv
+import datetime
+from pathlib import Path
 
 import requests
-import datetime
-import json
 
 
-USGS_URL = 'https://earthquake.usgs.gov/fdsnws/event/1/query?starttime={}&format=geojson&limit=20000'
+INGV_URL = "https://webservices.ingv.it/fdsnws/event/1/query"
 
-""" 
-    Query the USGS database and return the strongest earthquake in the last days_past days.
-    Arguments:
-    days_past(int): how many days back to search
+
+def read_bounding_box():
+    """Read the Italian bounding box coordinates from bounding_box.csv."""
+    csv_path = Path(__file__).with_name("bounding_box.csv")
+
+    with csv_path.open("r", newline="", encoding="utf-8") as csvfile:
+        reader = csv.DictReader(csvfile)
+        row = next(reader)
+
+    return {
+        "minlatitude": float(row["minlatitude"]),
+        "maxlatitude": float(row["maxlatitude"]),
+        "minlongitude": float(row["minlongitude"]),
+        "maxlongitude": float(row["maxlongitude"]),
+    }
+
+
+def _format_datetime_parts(time_string):
+    """Convert an ISO datetime string into day and time strings."""
+    clean_time = time_string.strip().replace("Z", "+00:00")
+    event_datetime = datetime.datetime.fromisoformat(clean_time)
+
+    day = event_datetime.strftime("%d/%m/%Y")
+    time = event_datetime.strftime("%H:%M:%S")
+
+    return day, time
+
+
+def gather_earthquakes(days):
+    """
+    Query the INGV API and return earthquakes inside the Italian bounding box.
+
     Returns:
-    tuple: (magnitude, place), where magnitude is a float, place is a string describing a location.
-    For ex., like 7.7 and 124km NNW of Lucea, Jamaica.
-"""
-def get_earthquake(days_past):
-    #get the date of today - days_past days at 00 AM
-    start_date = (datetime.datetime.now() + datetime.timedelta(days=-days_past)).strftime("%Y-%m-%d")
-    url = USGS_URL.format(start_date)
-    r = requests.get(url)
-    # Parse the JSON response
-    events = json.loads(requests.get(url).text)
-    magnitude = 0
-    place = ''
-    # Loop through all events to find the one with highest magnitude
-    for event in events['features']:
+        list[tuple]: tuples with day, time, magnitude, latitude, longitude, place.
+    """
+    bounding_box = read_bounding_box()
+
+    end_time = datetime.datetime.utcnow()
+    start_time = end_time - datetime.timedelta(days=days)
+
+    params = {
+        "format": "text",
+        "starttime": start_time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "endtime": end_time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "minlatitude": bounding_box["minlatitude"],
+        "maxlatitude": bounding_box["maxlatitude"],
+        "minlongitude": bounding_box["minlongitude"],
+        "maxlongitude": bounding_box["maxlongitude"],
+    }
+
+    response = requests.get(INGV_URL, params=params, timeout=30)
+    response.raise_for_status()
+
+    lines = response.text.strip().splitlines()
+
+    if not lines:
+        return []
+
+    header = [column.strip() for column in lines[0].lstrip("#").split("|")]
+    earthquakes = []
+
+    for line in lines[1:]:
+        values = [value.strip() for value in line.split("|")]
+        event = dict(zip(header, values))
+
         try:
-            mag = float(event['properties']['mag'])
-        except TypeError:
-            pass    # skip events with missing magnitude data
-        if mag > magnitude:
-            magnitude = mag
-            place = event['properties']['place']
-    return magnitude, place
+            day, time = _format_datetime_parts(event["Time"])
+            magnitude = float(event["Magnitude"])
+            latitude = float(event["Latitude"])
+            longitude = float(event["Longitude"])
+            place = event.get("EventLocationName", "")
+        except (KeyError, TypeError, ValueError):
+            continue
+
+        earthquakes.append(
+            (day, time, magnitude, latitude, longitude, place)
+        )
+
+    return earthquakes

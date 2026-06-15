@@ -1,0 +1,5 @@
+.venv/
+pyvenv.cfg
+earthquakes.db
+__pycache__/
+*.pyc

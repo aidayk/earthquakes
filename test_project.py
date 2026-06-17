@@ -61,3 +61,22 @@ class TestEarthquakeProject(TestCase):
                 lon, bbox['maxlongitude'],
                 msg=f"{city} longitude {lon} is right of maxlongitude {bbox['maxlongitude']}"
             )
+
+    def test_magnitude(self):
+        """
+        Test that no earthquake in the DB has magnitude above 9.5.
+
+        9.5 was the magnitude of the 1960 Valdivia earthquake in Chile,
+        the strongest ever recorded. Nothing should exceed this.
+        """
+        conn = sqlite3.connect('earthquakes.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT MAX(mag) FROM earthquakes_db")
+        max_mag = cursor.fetchone()[0]
+        conn.close()
+
+        if max_mag is not None:  # skip check if database is empty
+            self.assertLessEqual(
+                max_mag, 9.5,
+                msg=f"Database contains magnitude {max_mag} which exceeds the maximum ever recorded!"
+            )

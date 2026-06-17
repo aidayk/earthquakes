@@ -80,3 +80,20 @@ class TestEarthquakeProject(TestCase):
                 max_mag, 9.5,
                 msg=f"Database contains magnitude {max_mag} which exceeds the maximum ever recorded!"
             )
+
+    def test_order(self):
+        """
+        Test that query_db returns results sorted by decreasing magnitude.
+
+        For example [4.2, 3.8, 3.1] is correct.
+        [3.8, 4.2, 3.1] would fail this test.
+        """
+        results = query_db(K=50, days=30, min_magnitude=0.0)
+        magnitudes = [row[2] for row in results]  # index 2 is magnitude
+
+        for i in range(len(magnitudes) - 1):
+            self.assertGreaterEqual(
+                magnitudes[i], magnitudes[i + 1],
+                msg=f"Sorting error at position {i}: "
+                    f"{magnitudes[i]} is followed by {magnitudes[i + 1]}"
+            )

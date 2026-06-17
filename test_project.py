@@ -97,3 +97,24 @@ class TestEarthquakeProject(TestCase):
                 msg=f"Sorting error at position {i}: "
                     f"{magnitudes[i]} is followed by {magnitudes[i + 1]}"
             )
+
+    def test_no_null_magnitudes(self):
+        """
+        Test that every row in the DB has a non-null magnitude.
+
+        Osman's gather_earthquakes() already skips events
+        with missing data, so this should always pass, but it's
+        good to verify it explicitly.
+        """
+        conn = sqlite3.connect('earthquakes.db')
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT COUNT(*) FROM earthquakes_db WHERE mag IS NULL"
+        )
+        null_count = cursor.fetchone()[0]
+        conn.close()
+
+        self.assertEqual(
+            null_count, 0,
+            msg=f"Found {null_count} earthquakes with NULL magnitude in the database!"
+        )
